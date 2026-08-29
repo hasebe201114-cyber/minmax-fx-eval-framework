@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.tox/
+.venv/
+venv/
+env/
+
+# 機密情報
+.env
+.env.local
+*.key
+*.pem
+api_*.json
+credentials.json
+
+# データ（git 追跡しない）
+data/raw/
+data/curated/*.json
+data/curated/*.csv
+data/curated/*.parquet
+
+# ログ・実行時成果物
+logs/
+*.log
+output/
+results/
+artifacts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# OS
+desktop.ini

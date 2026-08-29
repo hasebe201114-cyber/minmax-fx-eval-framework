@@ -1,0 +1,395 @@
+[
+  {
+    "sys_id": "SYS-FX007",
+    "name": "レンジブレイク・プルバック",
+    "n_trades": 125,
+    "current_verdict": "REJECT",
+    "v01_pass": 0,
+    "v01_fail": 10,
+    "v01_pass_metrics": [],
+    "v01_fail_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "min_n_trades",
+      "perm_p"
+    ],
+    "v02_pass": 2,
+    "v02_fail": 9,
+    "v02_pass_metrics": [
+      "K3m_iid_percentile",
+      "n_hard_floor"
+    ],
+    "v02_fail_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "perm_p",
+      "DSR"
+    ],
+    "dsr": 0.0,
+    "dsr_passes": false,
+    "sharpe_observed": 0.744,
+    "e_max_sharpe": 1.878,
+    "n_trials": 19
+  },
+  {
+    "sys_id": "SYS-FX008",
+    "name": "トレンドフォロー・MAクロス",
+    "n_trades": 163,
+    "current_verdict": "REJECT",
+    "v01_pass": 3,
+    "v01_fail": 7,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_expectancy",
+      "K5m_spread_cost"
+    ],
+    "v01_fail_metrics": [
+      "K1m_pf",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "min_n_trades",
+      "perm_p"
+    ],
+    "v02_pass": 6,
+    "v02_fail": 5,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_expectancy",
+      "K3m_iid_percentile",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "K1m_pf",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K4m_payoff",
+      "perm_p"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 5.362,
+    "e_max_sharpe": 0.853,
+    "n_trials": 3
+  },
+  {
+    "sys_id": "SYS-FX009 v2",
+    "name": "上位足トレンド+ダブルトップ/ボトム",
+    "n_trades": 179,
+    "current_verdict": "REJECT (確定的)",
+    "v01_pass": 2,
+    "v01_fail": 8,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "perm_p"
+    ],
+    "v01_fail_metrics": [
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "min_n_trades"
+    ],
+    "v02_pass": 5,
+    "v02_fail": 6,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K3m_iid_percentile",
+      "n_hard_floor",
+      "perm_p",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K4m_payoff",
+      "K5m_spread_cost"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 2.858,
+    "e_max_sharpe": 0.0,
+    "n_trials": 1
+  },
+  {
+    "sys_id": "SYS-FX010",
+    "name": "スワップポイントキャリー",
+    "n_trades": 60,
+    "current_verdict": "REJECT (78-86%が価格変動由来)",
+    "v01_pass": 8,
+    "v01_fail": 2,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "K5m_spread_cost"
+    ],
+    "v01_fail_metrics": [
+      "min_n_trades",
+      "perm_p"
+    ],
+    "v02_pass": 10,
+    "v02_fail": 1,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_iid_percentile",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "perm_p"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 14.529,
+    "e_max_sharpe": 1.193,
+    "n_trials": 5
+  },
+  {
+    "sys_id": "SYS-FX011 (T-13)",
+    "name": "ボラティリティ・ブレイク (T-13 トレール専業)",
+    "n_trades": 524,
+    "current_verdict": "保留",
+    "v01_pass": 7,
+    "v01_fail": 3,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_yearly",
+      "K5m_spread_cost",
+      "min_n_trades",
+      "perm_p"
+    ],
+    "v01_fail_metrics": [
+      "K2m_dd_monthly",
+      "K3m_max_consec",
+      "K4m_payoff"
+    ],
+    "v02_pass": 9,
+    "v02_fail": 2,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_yearly",
+      "K3m_iid_percentile",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "perm_p",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "K2m_dd_monthly",
+      "K4m_payoff"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 16.57,
+    "e_max_sharpe": 1.387,
+    "n_trials": 7
+  },
+  {
+    "sys_id": "SYS-FX012",
+    "name": "H1ブレイク+N_BREAKOUT (凍結設計)",
+    "n_trades": 100,
+    "current_verdict": "フォワードテスト中",
+    "v01_pass": 8,
+    "v01_fail": 2,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K5m_spread_cost",
+      "perm_p"
+    ],
+    "v01_fail_metrics": [
+      "K4m_payoff",
+      "min_n_trades"
+    ],
+    "v02_pass": 10,
+    "v02_fail": 1,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_iid_percentile",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "perm_p",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "K4m_payoff"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 8.914,
+    "e_max_sharpe": 0.0,
+    "n_trials": 1
+  },
+  {
+    "sys_id": "SYS-FX013",
+    "name": "非JPY通貨での再現性検証",
+    "n_trades": 200,
+    "current_verdict": "不採用",
+    "v01_pass": 0,
+    "v01_fail": 10,
+    "v01_pass_metrics": [],
+    "v01_fail_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "min_n_trades",
+      "perm_p"
+    ],
+    "v02_pass": 2,
+    "v02_fail": 9,
+    "v02_pass_metrics": [
+      "K3m_iid_percentile",
+      "n_hard_floor"
+    ],
+    "v02_fail_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "perm_p",
+      "DSR"
+    ],
+    "dsr": 0.0,
+    "dsr_passes": false,
+    "sharpe_observed": -1.88,
+    "e_max_sharpe": 0.0,
+    "n_trials": 1
+  },
+  {
+    "sys_id": "SYS-FX016",
+    "name": "JPY クロス追加通貨 (CHF/CAD)",
+    "n_trades": 427,
+    "current_verdict": "司令塔判断待ち",
+    "v01_pass": 5,
+    "v01_fail": 5,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K5m_spread_cost",
+      "min_n_trades"
+    ],
+    "v01_fail_metrics": [
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "perm_p"
+    ],
+    "v02_pass": 7,
+    "v02_fail": 4,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K3m_iid_percentile",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "DSR"
+    ],
+    "v02_fail_metrics": [
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K4m_payoff",
+      "perm_p"
+    ],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 8.017,
+    "e_max_sharpe": 0.0,
+    "n_trials": 1
+  },
+  {
+    "sys_id": "SYS-FX018",
+    "name": "breakeven_trigger_r=2.0",
+    "n_trades": 219,
+    "current_verdict": "司令塔判断待ち",
+    "v01_pass": 9,
+    "v01_fail": 1,
+    "v01_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_max_consec",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "perm_p"
+    ],
+    "v01_fail_metrics": [
+      "min_n_trades"
+    ],
+    "v02_pass": 11,
+    "v02_fail": 0,
+    "v02_pass_metrics": [
+      "K1m_sharpe",
+      "K1m_pf",
+      "K1m_expectancy",
+      "K2m_dd_monthly",
+      "K2m_dd_yearly",
+      "K3m_iid_percentile",
+      "K4m_payoff",
+      "K5m_spread_cost",
+      "n_hard_floor",
+      "perm_p",
+      "DSR"
+    ],
+    "v02_fail_metrics": [],
+    "dsr": 1.0,
+    "dsr_passes": true,
+    "sharpe_observed": 12.253,
+    "e_max_sharpe": 0.0,
+    "n_trials": 1
+  }
+]
