@@ -18,6 +18,7 @@ from minmax_fx_eval.statistics.dsr import (
     deflated_sharpe_ratio,
     expected_max_sharpe_ratio,
     probabilistic_sharpe_ratio,
+    compute_sharpe_z,
 )
 
 
@@ -149,3 +150,69 @@ class TestDSR:
             "passes_threshold", "threshold",
         }
         assert required.issubset(d.keys())
+
+
+class TestComputeSharpeZ:
+    """compute_sharpe_z() pure function のテスト (v0.3 M-D1 対応)."""
+
+    def test_basic_z_value(self):
+        """Sharpe=1.0, T=100, benchmark=0 で z > 0.
+
+        z = (1.0 - 0) * sqrt(99) / sqrt(1.0 - 0 + 0.5 * 1) = 9.95 / 1.225 ≈ 8.12
+        """
+        z = compute_sharpe_z(1.0, 100, 0.0)
+        assert 7.5 < z < 8.5
+
+    def test_z_with_benchmark(self):
+        """benchmark = E[max SR*] (N=10 ≈ 1.57) のとき z < 0."""
+        z_benchmark_zero = compute_sharpe_z(1.0, 100, 0.0)
+        z_benchmark_pos = compute_sharpe_z(1.0, 100, 1.57)
+        # benchmark が高いほど z は小さくなる
+        assert z_benchmark_pos < z_benchmark_zero
+        assert z_benchmark_pos < 0  # 1.0 < 1.57 なので負
+
+    def test_z_with_skewness_kurtosis(self):
+        """非ガウス補正（skewness・kurtosis）が効く."""
+        z_gauss = compute_sharpe_z(1.0, 100, 0.0, skewness=0.0, kurtosis=3.0)
+        z_fat_tail = compute_sharpe_z(1.0, 100, 0.0, skewness=0.0, kurtosis=6.0)
+        # fat-tail (kurtosis=6) の方が分母が大きく z が小さい
+        assert z_fat_tail < z_gauss
+
+    def test_dsr_and_z_statistic_consistency(self):
+        """v0.3 M-D1: DSR と z_statistic が同じ値から導出される（pure function 経由）.
+
+        Φ(z_statistic) == dsr が成立することを確認。
+        """
+        np.random.seed(42)
+        returns = np.random.normal(0.001, 0.01, 50)
+        result = deflated_sharpe_ratio(returns, n_trials=5)
+
+        # z_statistic から DSR を逆算
+        from scipy import stats as scipy_stats
+        dsr_from_z = float(scipy_stats.norm.cdf(result.z_statistic))
+        # 報告されている DSR と一致
+        assert abs(dsr_from_z - result.dsr) < 1e-10, (
+            f"DSR from z_statistic ({dsr_from_z}) != reported DSR ({result.dsr})"
+        )
+
+    def test_psr_via_pure_function_consistency(self):
+        """v0.3 M-D1: PSR が pure function 経由でも計算可能."""
+        z_psr = compute_sharpe_z(1.0, 50, 0.0)
+        from scipy import stats as scipy_stats
+        psr_computed = float(scipy_stats.norm.cdf(z_psr))
+        # PSR(probabilistic_sharpe_ratio) 経由の結果と一致
+        psr_direct = probabilistic_sharpe_ratio(1.0, n_observations=50)
+        assert abs(psr_computed - psr_direct) < 1e-10
+
+    def test_compute_sharpe_z_validates_inputs(self):
+        """compute_sharpe_z() の入力検証."""
+        # n_observations < 1
+        with pytest.raises(ValueError):
+            compute_sharpe_z(1.0, 0, 0.0)
+        # kurtosis < 1
+        with pytest.raises(ValueError):
+            compute_sharpe_z(1.0, 100, 0.0, kurtosis=0.5)
+        # denom_sq <= 0
+        # kurt=3, skew=10, SR=1: 1 - 10 + 0.5 = -8.5 < 0
+        with pytest.raises(ValueError):
+            compute_sharpe_z(1.0, 10, 0.0, kurtosis=3.0, skewness=10.0)

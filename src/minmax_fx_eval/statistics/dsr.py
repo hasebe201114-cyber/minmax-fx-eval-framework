@@ -109,6 +109,50 @@ def expected_max_sharpe_ratio(n_trials: int) -> float:
     return (1.0 - EULER_MASCHERONI) * z_upper + EULER_MASCHERONI * z_euler
 
 
+def compute_sharpe_z(
+    sharpe_observed: float,
+    n_observations: int,
+    benchmark_sharpe: float,
+    *,
+    skewness: float = 0.0,
+    kurtosis: float = 3.0,
+) -> float:
+    """Sharpe 検定の z 値（pure function）— Bailey & Lopez de Prado (2014) 共通式.
+
+    PSR・DSR・z_statistic のすべてで同一の z 値式を使用するための中央関数。
+    v0.3 (C 査読 M-D1 対応) で導入。
+
+    z = (SR - SR_benchmark) · √(T - 1) / √(1 - γ₃·SR + ((γ₄ - 1)/4)·SR²)
+
+    Args:
+        sharpe_observed: 観測 Sharpe。
+        n_observations: リターン観測数。1 以上。
+        benchmark_sharpe: 比較対象の Sharpe。PSR のとき 0、DSR のとき E[max SR*]。
+        skewness: リターンの標本歪度。デフォルト 0（ガウス）。
+        kurtosis: リターンの標本尖度（生・3 がガウス）。デフォルト 3.0。
+
+    Returns:
+        z 値（標準正規分布の分位）。
+
+    Raises:
+        ValueError: n_observations < 1、kurtosis < 1、または分母が非正。
+    """
+    if n_observations < 1:
+        raise ValueError(f"n_observations must be >= 1, got {n_observations}")
+    if kurtosis < 1.0:
+        raise ValueError(f"kurtosis must be >= 1 (raw kurtosis), got {kurtosis}")
+
+    denom_sq = 1.0 - skewness * sharpe_observed + ((kurtosis - 1.0) / 4.0) * sharpe_observed**2
+    if denom_sq <= 0.0:
+        raise ValueError(
+            f"denominator squared is non-positive ({denom_sq}); "
+            f"sharpe={sharpe_observed} may be extreme for skewness={skewness}, "
+            f"kurtosis={kurtosis}"
+        )
+    denom = math.sqrt(denom_sq)
+    return (sharpe_observed - benchmark_sharpe) * math.sqrt(n_observations - 1) / denom
+
+
 def probabilistic_sharpe_ratio(
     sharpe_observed: float,
     *,
@@ -124,35 +168,15 @@ def probabilistic_sharpe_ratio(
 
     PSR = Φ( (SR - SR_benchmark) · √(T - 1) / √(1 - γ₃·SR + ((γ₄ - 1)/4)·SR²) )
 
-    Args:
-        sharpe_observed: 観測 Sharpe。
-        n_observations: リターン観測数。1 以上。
-        skewness: リターンの標本歪度。デフォルト 0（ガウス）。
-        kurtosis: リターンの標本尖度（生・3 がガウス）。デフォルト 3.0。
-        benchmark_sharpe: 比較対象の Sharpe。デフォルト 0。
-
-    Returns:
-        0〜1 の確率値。
-
-    Raises:
-        ValueError: n_observations < 1、kurtosis < 1、または分母が非正。
+    v0.3 (M-D1 対応): 内部 z 値計算を `compute_sharpe_z()` に統一。
     """
-    if n_observations < 1:
-        raise ValueError(f"n_observations must be >= 1, got {n_observations}")
-    if kurtosis < 1.0:
-        raise ValueError(f"kurtosis must be >= 1 (raw kurtosis), got {kurtosis}")
-
-    # 分母: √(1 - γ₃·SR + ((γ₄ - 1)/4)·SR²)
-    denom_sq = 1.0 - skewness * sharpe_observed + ((kurtosis - 1.0) / 4.0) * sharpe_observed**2
-    if denom_sq <= 0.0:
-        raise ValueError(
-            f"denominator squared is non-positive ({denom_sq}); "
-            f"sharpe={sharpe_observed} may be extreme for skewness={skewness}, "
-            f"kurtosis={kurtosis}"
-        )
-    denom = math.sqrt(denom_sq)
-
-    z = (sharpe_observed - benchmark_sharpe) * math.sqrt(n_observations - 1) / denom
+    z = compute_sharpe_z(
+        sharpe_observed,
+        n_observations,
+        benchmark_sharpe,
+        skewness=skewness,
+        kurtosis=kurtosis,
+    )
     return float(stats.norm.cdf(z))
 
 
@@ -222,28 +246,14 @@ def deflated_sharpe_ratio(
 
     e_max = expected_max_sharpe_ratio(n_trials)
 
-    # PSR（比較用: benchmark=0）
-    psr = probabilistic_sharpe_ratio(
-        sharpe,
-        n_observations=n,
-        skewness=skewness,
-        kurtosis=kurtosis,
-        benchmark_sharpe=0.0,
+    # v0.3 (M-D1 対応): 共通 pure function で PSR・DSR・z_statistic を統一.
+    z_dsr = compute_sharpe_z(
+        sharpe, n, e_max, skewness=skewness, kurtosis=kurtosis
     )
-
-    # DSR（benchmark=E[max SR*]）
-    dsr = probabilistic_sharpe_ratio(
-        sharpe,
-        n_observations=n,
-        skewness=skewness,
-        kurtosis=kurtosis,
-        benchmark_sharpe=e_max,
-    )
-
-    # Z 値（参考）
-    z = (sharpe - e_max) * math.sqrt(n - 1) / math.sqrt(
-        1.0 - skewness * sharpe + ((kurtosis - 1.0) / 4.0) * sharpe**2
-    )
+    psr = float(stats.norm.cdf(compute_sharpe_z(
+        sharpe, n, 0.0, skewness=skewness, kurtosis=kurtosis
+    )))
+    dsr = float(stats.norm.cdf(z_dsr))
 
     return DeflatedSharpeRatioResult(
         sharpe_observed=sharpe,
@@ -254,7 +264,7 @@ def deflated_sharpe_ratio(
         n_trials=n_trials,
         dsr=dsr,
         psr=psr,
-        z_statistic=z,
+        z_statistic=z_dsr,  # v0.3 M-D1: PSR/DSR と同一の pure function で計算
         passes_threshold=(dsr >= threshold),
         threshold=threshold,
     )
@@ -268,4 +278,5 @@ __all__ = [
     "deflated_sharpe_ratio",
     "probabilistic_sharpe_ratio",
     "expected_max_sharpe_ratio",
+    "compute_sharpe_z",  # v0.3 M-D1 追加
 ]
