@@ -10,9 +10,19 @@
     (p5/p50/p95) を算出する。**p5 が DSR 閾値を超える場合のみ PASS** とする。
 
 使用方法:
+    # 通常の DSR 分布計算 (v0.3 n_trials 厳密カウント使用)
     python scripts/calc_dsr_with_distribution.py
-    # または
+
+    # p5 閾値感度分析 (Phase 2 残作業 I)
+    python scripts/calc_dsr_with_distribution.py --sensitivity
+
+    # サンプル数と上位 K 戦略指定
     python scripts/calc_dsr_with_distribution.py --n-samples 500 --top-k 6
+
+v0.3 改訂 (Phase 2 / 2026-08-30):
+    - load_strategy_data() で n_trials を KNOWN_STRATEGY_N_TRIALS[sys_id].conservative に統一
+    - --sensitivity モード追加: p5 閾値を 0.80 / 0.85 / 0.90 / 0.92 / 0.95 / 0.97 / 0.99 で
+      スイープし、各戦略の PASS/FAIL マトリクスを出力
 """
 
 from __future__ import annotations
@@ -26,6 +36,11 @@ from typing import Any
 import numpy as np
 
 from minmax_fx_eval.statistics.dsr import deflated_sharpe_ratio
+from minmax_fx_eval.statistics.n_trials_counter import KNOWN_STRATEGY_N_TRIALS
+
+
+# 感度分析のデフォルト p5 閾値スイープ
+DEFAULT_P5_THRESHOLDS: list[float] = [0.80, 0.85, 0.90, 0.92, 0.95, 0.97, 0.99]
 
 
 # ============================================================
@@ -203,8 +218,28 @@ def compute_dsr_distribution(
 # ============================================================
 
 
+def _resolve_n_trials(sys_id: str, fallback: int) -> int:
+    """v0.3 strict n_trials を KNOWN_STRATEGY_N_TRIALS から取得.
+
+    Args:
+        sys_id: 戦略 ID (例: "SYS-FX007", "SYS-FX011 T-13")
+        fallback: KNOWN_STRATEGY_N_TRIALS に未登録の場合のフォールバック値
+
+    Returns:
+        conservative n_trials (全自由度の積). 未登録なら fallback.
+    """
+    entry = KNOWN_STRATEGY_N_TRIALS.get(sys_id)
+    if entry is None:
+        return fallback
+    return entry.conservative
+
+
 def load_strategy_data() -> list[dict[str, Any]]:
-    """親 PJ の戦略ごとの trade_pnls + 期間 + n_trials を返す."""
+    """親 PJ の戦略ごとの trade_pnls + 期間 + n_trials を返す.
+
+    n_trials は v0.3 (M-R2) で KNOWN_STRATEGY_N_TRIALS[sys_id].conservative を
+    使用。SYS-FX011 系は 7 → 28 に増加（通貨選択×閾値選択×改善ループ）。
+    """
     strategies = []
 
     # SYS-FX007: A1_A2_combined 全 15 セル
@@ -223,7 +258,7 @@ def load_strategy_data() -> list[dict[str, Any]]:
             "start": "2023-11-01",
             "end": "2026-08-15",
             "initial_cash": 1_000_000.0,
-            "n_trials": 6,  # v0.2: 6 (ablations). v0.3 (M-R2): 通貨選択×閾値選択含む
+            "n_trials": _resolve_n_trials("SYS-FX007", fallback=6),
         })
 
     # SYS-FX008: USD/JPY TVT 3 期間通し
@@ -242,7 +277,7 @@ def load_strategy_data() -> list[dict[str, Any]]:
             "start": "2023-11-01",
             "end": "2026-08-15",
             "initial_cash": 1_000_000.0,
-            "n_trials": 3,
+            "n_trials": _resolve_n_trials("SYS-FX008", fallback=3),
         })
 
     # SYS-FX009: USD/JPY TVT 3 期間通し
@@ -261,7 +296,7 @@ def load_strategy_data() -> list[dict[str, Any]]:
             "start": "2023-11-01",
             "end": "2026-08-15",
             "initial_cash": 1_000_000.0,
-            "n_trials": 1,
+            "n_trials": _resolve_n_trials("SYS-FX009 v2", fallback=1),
         })
 
     # SYS-FX011 v7: monthly フィールドから直接
@@ -274,7 +309,7 @@ def load_strategy_data() -> list[dict[str, Any]]:
             "sys_id": "SYS-FX011 v7",
             "trade_pnls": None,  # 月次データ使用のため trade_pnls 経路はスキップ
             "monthly_pnl_usd": {m["month"]: m["sum_dollar_pnl"] for m in j["monthly"]},
-            "n_trials": 7,
+            "n_trials": _resolve_n_trials("SYS-FX011 v7", fallback=7),
             "_skip_distribution": True,
         })
 
@@ -292,7 +327,7 @@ def load_strategy_data() -> list[dict[str, Any]]:
             "start": "2023-11-01",
             "end": "2026-08-15",
             "initial_cash": 1000.0,
-            "n_trials": 7,
+            "n_trials": _resolve_n_trials("SYS-FX011 T-13", fallback=7),
         })
 
     return strategies
@@ -307,6 +342,18 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-samples", type=int, default=200, help="ランダム化サンプル数")
     parser.add_argument("--top-k", type=int, default=4, help="上位 K 戦略の詳細表示")
+    parser.add_argument(
+        "--sensitivity",
+        action="store_true",
+        help="p5 閾値感度分析 (Phase 2 残作業 I): 0.80/0.85/0.90/0.92/0.95/0.97/0.99 "
+             "の各閾値で PASS/FAIL マトリクスを出力",
+    )
+    parser.add_argument(
+        "--p5-thresholds",
+        type=str,
+        default=",".join(str(t) for t in DEFAULT_P5_THRESHOLDS),
+        help="カンマ区切りの p5 閾値リスト (デフォルト: " + ",".join(str(t) for t in DEFAULT_P5_THRESHOLDS) + ")",
+    )
     args = parser.parse_args()
 
     print("=" * 80)
@@ -363,6 +410,69 @@ def main() -> int:
     output_path = output_dir / "dsr_distribution_v03.json"
     output_path.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Saved: {output_path}")
+
+    # 感度分析 (Phase 2 残作業 I)
+    if args.sensitivity:
+        p5_thresholds = [float(t.strip()) for t in args.p5_thresholds.split(",") if t.strip()]
+        print()
+        print("=" * 80)
+        print("DSR p5 閾値感度分析 (Phase 2 残作業 I)")
+        print("=" * 80)
+        print(f"p5 閾値: {p5_thresholds}")
+        print()
+
+        # 戦略 × 閾値のマトリクスを出力
+        # 注: Windows cp932 互換のため >= を使用 (\u2265 だと UnicodeEncodeError)
+        header = ["strategy"] + [f"p5>={t:.2f}" for t in p5_thresholds] + ["p5 actual"]
+        print(" | ".join(f"{h:<14}" for h in header))
+        print("-" * (15 * len(header)))
+        sensitivity_rows: list[dict] = []
+        for r in results:
+            sys_id = r["sys_id"]
+            if r.get("dsr_distribution") is None:
+                continue
+            p5 = r["dsr_distribution"]["p5"]
+            row: dict = {"sys_id": sys_id, "p5_actual": p5, "passes": {}}
+            cells = [sys_id]
+            for t in p5_thresholds:
+                ok = p5 >= t
+                cells.append("PASS" if ok else "FAIL")
+                row["passes"][f"p5>={t:.2f}"] = ok
+            cells.append(f"{p5:.4f}")
+            print(" | ".join(f"{c:<14}" for c in cells))
+            sensitivity_rows.append(row)
+
+        # 戦略ごとの「どの p5 閾値で初めて PASS するか」を分析
+        print()
+        print("Threshold sensitivity (lowest p5 threshold at which each strategy PASSes):")
+        for row in sensitivity_rows:
+            sys_id = row["sys_id"]
+            p5 = row["p5_actual"]
+            # PASS する閾値のうち最低 (最も緩い) もの
+            min_pass = None
+            for t in p5_thresholds:
+                if p5 >= t:
+                    min_pass = t
+                    break
+            if min_pass is None:
+                verdict = "ALL thresholds FAIL (p5 < highest threshold 0.99)"
+            else:
+                verdict = f"PASS at lowest p5>={min_pass:.2f}"
+            print(f"  {sys_id:<20} p5={p5:.4f}  ->  {verdict}")
+
+        # 保存
+        sens_path = output_dir / "dsr_p5_sensitivity.json"
+        sens_payload = {
+            "generated_at": datetime.now().isoformat(),
+            "p5_thresholds": p5_thresholds,
+            "n_samples_per_strategy": args.n_samples,
+            "note": "Phase 2 残作業 I: p5 閾値感度分析。p5 実値は monthly placement "
+                    "ランダム化 N サンプル (--n-samples) の下側 5 パーセンタイル。",
+            "results": sensitivity_rows,
+        }
+        sens_path.write_text(json.dumps(sens_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        print()
+        print(f"Saved: {sens_path}")
 
     return 0
 
