@@ -176,6 +176,15 @@ KNOWN_STRATEGY_N_TRIALS: dict[str, NTrialsBreakdown] = {
         n_threshold_choices=1,
         notes="5 loops, 4 currencies fixed",
     ),
+    # SYS-FX010: キャリー戦略（no-stop 系 5 試行程度の改善）
+    "SYS-FX010": NTrialsBreakdown(
+        n_improvement_loops=5,  # no-stop 系の 5 バリアント
+        n_grid_search_combinations=1,
+        n_currency_choices=1,  # USD/JPY のみ
+        n_period_choices=1,
+        n_threshold_choices=1,
+        notes="5 no-stop variants, USD/JPY (synthetic returns)",
+    ),
 }
 
 
