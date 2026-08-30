@@ -101,7 +101,11 @@ class TestPermutationTestGeneric:
 
 
 class TestPermutationTestClusteredDeprecated:
-    """permutation_test_clustered() の非推奨テスト."""
+    """permutation_test_clustered() の非推奨テスト.
+
+    v0.3 m-S4 対応: DeprecationWarning → PendingDeprecationWarning に格上げ、
+    v1.0 で完全削除予定であることを docstring + テストで担保.
+    """
 
     def test_deprecated_warning(self):
         """非推奨警告."""
@@ -113,6 +117,34 @@ class TestPermutationTestClusteredDeprecated:
                 pass  # 実装は省略している
         # 非推奨警告が出ているはず
         # 注: 警告が出ない場合は「実装省略」による早期 return の可能性
+
+    def test_v03_emits_pending_deprecation(self) -> None:
+        """v0.3 m-S4: PendingDeprecationWarning を発していること.
+
+        DeprecationWarning ではなく PendingDeprecationWarning を使うことで
+        「v1.0 で完全削除予定」を利用者（フィルタ設定者）に明示.
+        """
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                permutation_test_clustered([1.0, -1.0, 2.0], ["USD_JPY", "EUR_JPY", "USD_JPY"])
+            except NotImplementedError:
+                pass
+        # PendingDeprecationWarning が出ること
+        assert any(
+            issubclass(warning.category, PendingDeprecationWarning) for warning in w
+        ), (
+            "v0.3 m-S4: permutation_test_clustered() は PendingDeprecationWarning を"
+            "発する必要があります（v1.0 で完全削除予定）"
+        )
+        # DeprecationWarning ではなく PendingDeprecationWarning であるべき
+        # (DeprecationWarning も PendingDeprecationWarning のサブクラスだが、
+        #  「より強い警告」であることを担保するため明示チェック)
+        for warning in w:
+            if issubclass(warning.category, DeprecationWarning):
+                assert issubclass(warning.category, PendingDeprecationWarning), (
+                    f"DeprecationWarning だが PendingDeprecationWarning ではない: {warning.category}"
+                )
 
 
 class TestPermutationProperties:

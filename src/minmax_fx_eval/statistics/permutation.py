@@ -225,17 +225,31 @@ def permutation_test_clustered(
     seed: int | None = None,
     correlation_matrix: Mapping[str, Mapping[str, float]] | None = None,
 ) -> PermutationTestResult:
-    """[非推奨] 通貨ペア単位のクラスタ版 permutation test.
+    """[非推奨 / v1.0 で削除予定] 通貨ペア単位のクラスタ版 permutation test.
 
-    v0.2 では非推奨。代わりに `permutation_test_block()` を使用すること。
+    v0.2 では非推奨、v0.3 でも引き続き非推奨。v1.0 で本関数は完全削除予定。
+    代わりに `permutation_test_block()` を使用すること。
+
     理由: 通貨ペア単位のシャッフルでは 4 通貨構成で p 値下限が 0.3158 に
     張り付く構造的欠陥がある（外部レビュー F2）。
+
+    移行ガイド (v0.3 時点):
+        旧: permutation_test_clustered(trade_pnls, pairs=...)
+        新: permutation_test_block(trade_pnls, block_dates=...)
+        - `pairs` 引数（通貨ラベル）は `block_dates` 引数（エントリー日リスト）に置換
+        - clustered 版の correlation_matrix 引数は block 版では不要
+          （block 単位のシャッフルは correlation 構造を保存するため）
+
+    警告レベル (v0.3 で強化):
+        v0.2 では DeprecationWarning のみだったものを、v0.3 で
+        `PendingDeprecationWarning` に格上げし、v1.0 で完全削除する方針を明示。
     """
     warnings.warn(
-        "permutation_test_clustered() は v0.2 で非推奨。"
+        "permutation_test_clustered() は v0.2 で非推奨、v1.0 で完全削除予定。"
         "4 通貨構成で p 値下限 0.3158 の構造的欠陥あり。"
-        "代わりに permutation_test_block() を使用してください。",
-        DeprecationWarning,
+        "代わりに permutation_test_block() を使用してください。"
+        "移行ガイド: pairs→block_dates, correlation_matrix 削除。",
+        PendingDeprecationWarning,
         stacklevel=2,
     )
     # 親 PJ の実装を呼び出す（後方互換のためのスタブ）

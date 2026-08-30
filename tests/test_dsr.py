@@ -42,6 +42,22 @@ class TestExpectedMaxSharpe:
         e = expected_max_sharpe_ratio(1000)
         assert 2.5 < e < 3.5
 
+    def test_v03_n1_docstring_documents_psr_fallback(self) -> None:
+        """v0.3 m-D1 対応: N=1 の docstring に「PSR と同等 (benchmark=0)」の
+        解釈が明記されていること.
+
+        C 査読 m-D1 修正案: 「docstring に『N=1 は PSR と同等 (benchmark=0)』と明記」
+        """
+        import inspect
+
+        from minmax_fx_eval.statistics.dsr import expected_max_sharpe_ratio
+
+        doc = inspect.getdoc(expected_max_sharpe_ratio) or ""
+        assert "PSR" in doc, "N=1 の docstring に PSR への言及が無い (m-D1 未対応)"
+        assert "benchmark" in doc.lower() or "0" in doc, (
+            "N=1 の docstring に benchmark=0 の解釈が無い"
+        )
+
     def test_n_invalid_raises(self):
         """N < 1 は ValueError."""
         with pytest.raises(ValueError):
@@ -124,6 +140,31 @@ class TestDSR:
     def test_dsr_threshold_default(self):
         """DSR_REQUIRED_THRESHOLD = 0.95 を確認."""
         assert DSR_REQUIRED_THRESHOLD == 0.95
+
+    def test_v03_threshold_has_bailey_citation(self) -> None:
+        """v0.3 m-S3 対応: DSR_REQUIRED_THRESHOLD の docstring に Bailey 2014 出典が
+        記載されていること (Table 1, Figure 2, §3.2).
+
+        C 査読 m-S3 修正案: 「ソース論文 Table 1 / Figure 2 の具体的閾値をコメントに記載」
+        """
+        import inspect
+
+        from minmax_fx_eval.statistics import dsr as dsr_module
+
+        source = inspect.getsource(dsr_module)
+        # Bailey 2014 出典 (Table 1 / Figure 2 / §3.2 / Lopez de Prado 2018) の
+        # いずれかが DSR_REQUIRED_THRESHOLD 定義近辺に書かれていること
+        threshold_idx = source.find("DSR_REQUIRED_THRESHOLD = 0.95")
+        assert threshold_idx > -1, "DSR_REQUIRED_THRESHOLD の定義が見つからない"
+        # 直前 1500 文字以内 (コメントブロック) に出典が含まれること
+        preceding = source[max(0, threshold_idx - 1500):threshold_idx]
+        assert "Bailey" in preceding, "DSR_REQUIRED_THRESHOLD 定義前に Bailey 出典が無い"
+        # 主要参照点 (Table 1 / Figure 2 / §3.2) のいずれかが言及されていること
+        citation_markers = ["Table 1", "Figure 2", "§3.2", "Lopez de Prado 2018"]
+        assert any(marker in preceding for marker in citation_markers), (
+            f"Bailey 2014 出典に Table 1 / Figure 2 / §3.2 / Lopez de Prado 2018 "
+            f"のいずれかが含まれていない: {preceding[-500:]}"
+        )
 
     def test_passes_threshold_property(self):
         """passes_threshold プロパティの整合性."""
