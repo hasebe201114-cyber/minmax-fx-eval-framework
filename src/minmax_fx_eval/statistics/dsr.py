@@ -51,14 +51,20 @@ DSR_REQUIRED_THRESHOLD = 0.95
 
 @dataclass
 class DeflatedSharpeRatioResult:
-    """Deflated Sharpe Ratio 計算結果."""
+    """Deflated Sharpe Ratio 計算結果.
 
+    スキーマ (v0.3 m-R3 安定化): 以下のフィールドは破壊的変更禁止.
+    新フィールド追加は OK だが、既存フィールドの削除・型変更は禁止.
+    """
+
+    # Core metrics
     sharpe_observed: float
     expected_max_sharpe: float
     skewness: float
     kurtosis: float
     n_observations: int
     n_trials: int
+    # Statistical results
     dsr: float  # 真の Sharpe > 0 の確率 (DSR)
     psr: float  # 比較用: ゼロを閾値とした PSR
     z_statistic: float
@@ -66,6 +72,7 @@ class DeflatedSharpeRatioResult:
     threshold: float
 
     def to_dict(self) -> dict:
+        """to_dict() の出力スキーマは固定 (v0.3 m-R3)."""
         return {
             "sharpe_observed": round(self.sharpe_observed, 4),
             "expected_max_sharpe": round(self.expected_max_sharpe, 4),
@@ -79,6 +86,8 @@ class DeflatedSharpeRatioResult:
             "passes_threshold": self.passes_threshold,
             "threshold": self.threshold,
         }
+
+    SCHEMA_VERSION = "1.0.0"  # v0.3 m-R3: スキーマバージョン明示
 
 
 def expected_max_sharpe_ratio(n_trials: int) -> float:
@@ -141,6 +150,16 @@ def compute_sharpe_z(
         raise ValueError(f"n_observations must be >= 1, got {n_observations}")
     if kurtosis < 1.0:
         raise ValueError(f"kurtosis must be >= 1 (raw kurtosis), got {kurtosis}")
+    # v0.3 m-S2: kurtosis の fisher=True/False 混同防止
+    if kurtosis < 1.5:
+        import warnings
+        warnings.warn(
+            f"kurtosis={kurtosis} is near 1.0 (boundary). "
+            f"Note: Bailey 2014 uses RAW kurtosis (Gaussian=3.0). "
+            f"If you meant EXCESS kurtosis (Gaussian=0.0), add 3.0.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     denom_sq = 1.0 - skewness * sharpe_observed + ((kurtosis - 1.0) / 4.0) * sharpe_observed**2
     if denom_sq <= 0.0:
@@ -209,6 +228,13 @@ def deflated_sharpe_ratio(
     Note:
         親 PJ の文脈では、月次リターンを渡して periods_per_year=12 とする想定。
         あるいは日次リターンで periods_per_year=252。
+
+        periods_per_year の正規化（v0.3 m-R2 対応）:
+            - 日次リターン: 252（営業日）
+            - 週次リターン: 52
+            - 月次リターン: 12
+            - 年次リターン: 1
+        デフォルトは 252（日次）。月次リターンを渡す場合は呼び出し側で 12 を指定。
     """
     r = np.asarray(returns, dtype=float)
     if r.ndim != 1:
@@ -218,6 +244,23 @@ def deflated_sharpe_ratio(
         raise ValueError(f"returns must have >= 2 observations, got {n}")
     if n_trials < 1:
         raise ValueError(f"n_trials must be >= 1, got {n_trials}")
+    # v0.3 m-S2: NaN/inf ハンドリング（堅牢性）
+    if not np.all(np.isfinite(r)):
+        raise ValueError(
+            f"returns must not contain NaN or inf values "
+            f"(got {np.sum(~np.isfinite(r))} non-finite observations out of {n})"
+        )
+    # v0.3 m-R2: periods_per_year の正規化
+    valid_periods = {1, 4, 12, 52, 252, 365}
+    if periods_per_year not in valid_periods:
+        import warnings
+        warnings.warn(
+            f"periods_per_year={periods_per_year} is non-standard. "
+            f"Expected one of {valid_periods} (1=yearly, 4=quarterly, 12=monthly, "
+            f"52=weekly, 252=daily-biz, 365=daily-cal).",
+            UserWarning,
+            stacklevel=2,
+        )
 
     excess = r - risk_free_rate
     mean = float(excess.mean())

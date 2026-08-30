@@ -216,3 +216,47 @@ class TestComputeSharpeZ:
         # kurt=3, skew=10, SR=1: 1 - 10 + 0.5 = -8.5 < 0
         with pytest.raises(ValueError):
             compute_sharpe_z(1.0, 10, 0.0, kurtosis=3.0, skewness=10.0)
+
+
+class TestDSRv03Robustness:
+    """v0.3 m-S2/m-R2: NaN/inf ハンドリング・periods_per_year 正規化."""
+
+    def test_nan_in_returns_raises(self):
+        """NaN を含む returns は ValueError (m-S2)."""
+        with pytest.raises(ValueError, match="NaN or inf"):
+            deflated_sharpe_ratio([0.01, 0.02, float("nan"), 0.01], n_trials=5)
+
+    def test_inf_in_returns_raises(self):
+        """inf を含む returns は ValueError."""
+        with pytest.raises(ValueError, match="NaN or inf"):
+            deflated_sharpe_ratio([0.01, float("inf"), 0.02], n_trials=5)
+
+    def test_all_finite_works(self):
+        """全て有限の値は正常動作."""
+        np.random.seed(42)
+        returns = np.random.normal(0.001, 0.01, 50).tolist()
+        result = deflated_sharpe_ratio(returns, n_trials=5)
+        assert result.dsr > 0  # 何らかの値
+
+    def test_non_standard_periods_warns(self):
+        """非標準 periods_per_year で UserWarning (m-R2)."""
+        np.random.seed(42)
+        returns = np.random.normal(0.001, 0.01, 50).tolist()
+        with pytest.warns(UserWarning, match="non-standard"):
+            deflated_sharpe_ratio(returns, n_trials=5, periods_per_year=100)
+
+    def test_standard_periods_no_warning(self):
+        """標準 periods_per_year では警告なし."""
+        import warnings as _warnings
+        np.random.seed(42)
+        returns = np.random.normal(0.001, 0.01, 50).tolist()
+        for p in (1, 4, 12, 52, 252, 365):
+            with _warnings.catch_warnings():
+                _warnings.simplefilter("error")  # 警告が出たらエラー
+                deflated_sharpe_ratio(returns, n_trials=5, periods_per_year=p)
+
+    def test_schema_version_constant(self):
+        """v0.3 m-R3: DeflatedSharpeRatioResult.SCHEMA_VERSION が定義されている."""
+        from minmax_fx_eval.statistics.dsr import DeflatedSharpeRatioResult
+        assert hasattr(DeflatedSharpeRatioResult, "SCHEMA_VERSION")
+        assert DeflatedSharpeRatioResult.SCHEMA_VERSION == "1.0.0"

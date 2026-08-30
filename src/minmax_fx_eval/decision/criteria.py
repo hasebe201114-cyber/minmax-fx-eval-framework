@@ -157,17 +157,27 @@ def compute_k3m_scale_invariant(
 def evaluate_kpis(stats: Stats, *, version: str = "v0.2") -> list[KPIEvaluation]:
     """KPI 評価（v0.1 / v0.2 切替可能）.
 
+    v0.3 (m-S1 対応): version="v0.1" は deprecated.
+    新規コードでは version パラメータを指定せず v0.2 をデフォルトで使うこと.
+    親 PJ 互換のための一時的措置.
+
     Args:
         stats: 評価対象の統計量 dict。
-        version: "v0.1" (親 PJ 互換) または "v0.2" (本 PJ 推奨)。
+        version: "v0.1" (親 PJ 互換・deprecated) または "v0.2" (本 PJ 推奨)。
 
     Returns:
         KPIEvaluation のリスト。
     """
-    if version == "v0.2":
-        return _evaluate_kpis_v0_2(stats)
-    elif version == "v0.1":
+    if version == "v0.1":
+        import warnings
+        warnings.warn(
+            "v0.1 evaluation is deprecated (v0.3 m-S1). Use v0.2 (default) or omit version param.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return _evaluate_kpis_v0_1(stats)
+    elif version == "v0.2":
+        return _evaluate_kpis_v0_2(stats)
     else:
         raise ValueError(f"version must be 'v0.1' or 'v0.2', got {version}")
 
