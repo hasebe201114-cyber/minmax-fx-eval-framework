@@ -142,29 +142,47 @@ class TestDSR:
         assert DSR_REQUIRED_THRESHOLD == 0.95
 
     def test_v03_threshold_has_bailey_citation(self) -> None:
-        """v0.3 m-S3 対応: DSR_REQUIRED_THRESHOLD の docstring に Bailey 2014 出典が
-        記載されていること (Table 1, Figure 2, §3.2).
+        """v0.3 m-S3 対応: DSR_REQUIRED_THRESHOLD のコメントに Bailey 2014 参照が
+        記載されていること (v0.3 レビュー後の改訂版)。
 
-        C 査読 m-S3 修正案: 「ソース論文 Table 1 / Figure 2 の具体的閾値をコメントに記載」
+        改訂履歴:
+        - 2026-08-30 (commit fed71a4): Table 1 / Figure 2 / 引用文を捏造して記載
+          → claude code 環境 C 査読 (30-claudecode-c-review.md B-1) で発覚
+        - 2026-09-01 (本コミット): 捏造を削除し「本 PJ 独自の設計判断」として
+          正直に書き直し。Bailey 2014 の書誌情報は維持 (doi 付き)。
+
+        注意: 訂正マーカーのコメント内に「Table 1 (p.96)」等の文字列が登場するが、
+        これらは「捏造だった」記録のためであり、実際の引用としては扱わない。
+        テストは `DSR_REQUIRED_THRESHOLD = 0.95` 直前の 800 文字 (現役コメント) のみ検査する。
         """
         import inspect
 
         from minmax_fx_eval.statistics import dsr as dsr_module
 
         source = inspect.getsource(dsr_module)
-        # Bailey 2014 出典 (Table 1 / Figure 2 / §3.2 / Lopez de Prado 2018) の
-        # いずれかが DSR_REQUIRED_THRESHOLD 定義近辺に書かれていること
         threshold_idx = source.find("DSR_REQUIRED_THRESHOLD = 0.95")
         assert threshold_idx > -1, "DSR_REQUIRED_THRESHOLD の定義が見つからない"
-        # 直前 1500 文字以内 (コメントブロック) に出典が含まれること
-        preceding = source[max(0, threshold_idx - 1500):threshold_idx]
-        assert "Bailey" in preceding, "DSR_REQUIRED_THRESHOLD 定義前に Bailey 出典が無い"
-        # 主要参照点 (Table 1 / Figure 2 / §3.2) のいずれかが言及されていること
-        citation_markers = ["Table 1", "Figure 2", "§3.2", "Lopez de Prado 2018"]
-        assert any(marker in preceding for marker in citation_markers), (
-            f"Bailey 2014 出典に Table 1 / Figure 2 / §3.2 / Lopez de Prado 2018 "
-            f"のいずれかが含まれていない: {preceding[-500:]}"
+        # 直前 800 文字以内 (現役コメントブロック) を検査
+        # (訂正マーカーは文書の先頭〜中盤にあるので、ここには含まれない)
+        preceding = source[max(0, threshold_idx - 800):threshold_idx]
+        assert "Bailey" in preceding, (
+            "DSR_REQUIRED_THRESHOLD 定義の直前 800 文字以内に Bailey 出典が無い"
         )
+        # 正直な記載のマーカー: 「本 PJ 独自の設計判断」が含まれること
+        assert "本 PJ 独自" in preceding, (
+            "DSR_REQUIRED_THRESHOLD 定義前に「本 PJ 独自の設計判断」の"
+            "正直な記載が無い (claude code 環境 C 査読 B-1 対応)"
+        )
+        # 現役コメントには捏造引用 (Table 1 / Figure 2 / 引用文) が含まれていないこと
+        fabricated_markers_in_preceding = [
+            ("Table 1 (p.96)", "現役コメントに捏造図表が残存"),
+            ("Figure 2 (p.98)", "現役コメントに捏造図表が残存"),
+        ]
+        for marker, desc in fabricated_markers_in_preceding:
+            assert marker not in preceding, (
+                f"{desc}: {marker!r} が DSR_REQUIRED_THRESHOLD 定義直前に"
+                f"残存しています (claude code 環境 C 査読 B-1 修正が必要)"
+            )
 
     def test_passes_threshold_property(self):
         """passes_threshold プロパティの整合性."""
